@@ -1,0 +1,41 @@
+body {
+      background-color: #fff5f5;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+    }
+    
+    .login-box {
+      background: white;
+      padding: 2.5rem;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    .btn-custom {
+      background: #ff3f6c;
+      color: white;
+      font-weight: bold;
+    }
+    
+    .btn-custom:hover {
+      background: #e6335d;
+    }
+    
+    .small-text {
+      font-size: 0.875rem;
+    }
+    
+    a.text-link {
+      color: #ff3f6c;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    
+    a.text-link:hover {
+      text-decoration: underline;
+    }
+    

@@ -1,0 +1,39 @@
+{
+  "name": "y",
+  "version": "1.0.0",
+  "description": "User Management app",
+  "keywords": [
+    "Admin ROLES privilages"
+  ],
+  "homepage": "https://github.com/Keerthanas2000/UserManagement_Project#readme",
+  "bugs": {
+    "url": "https://github.com/Keerthanas2000/UserManagement_Project/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Keerthanas2000/UserManagement_Project.git"
+  },
+  "license": "ISC",
+  "author": "Keerthana",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "@stripe/stripe-js": "^7.3.0",
+    "axios": "^1.9.0",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.13.2",
+    "nodemailer": "^7.0.3",
+    "nodemon": "^3.1.10",
+    "stripe": "^18.1.1"
+  }
+}
