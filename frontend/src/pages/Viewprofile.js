@@ -204,7 +204,7 @@ function Viewprofile() {
               Add Address
             </Button>
           </Grid>
-          {userData.address.map((addr, index) => (
+          {userData?.address?.map((addr, index) => (
             <>
               <Grid size={12} sm={10}>
                 <Typography variant="h6" fontWeight="bold">
