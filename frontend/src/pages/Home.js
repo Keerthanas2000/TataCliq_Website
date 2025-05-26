@@ -328,10 +328,10 @@ function Home() {
       }
     } catch (error) {
       console.error("Error searching products:", error);
-      toast.error("Error searching products. Please try again.", {
-        position: "top-right",
-        autoClose: 3000,
-      });
+      // toast.error("Error searching products. Please try again.", {
+      //   position: "top-right",
+      //   autoClose: 3000,
+      // });
     }
   };
 
