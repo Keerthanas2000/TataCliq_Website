@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import { Link, useNavigate } from "react-router-dom";
+
 import { useSelector } from "react-redux";
 import "../App.css";
 import tatacliqlogo from "../images/tatacliqlogo.png";
@@ -14,11 +15,11 @@ function Home() {
   const cartCounter = useSelector((state) => {
     return state.cart.cartCounter;
   });
- // Home.js
-const wishlistCount = useSelector((state) => {
-  console.log("Wishlist state:", state.wishlist); // Should log { items: [] }
-  return state.wishlist.items.length;
-});
+  // Home.js
+  const wishlistCount = useSelector((state) => {
+    console.log("Wishlist state:", state.wishlist); // Should log { items: [] }
+    return state.wishlist.items.length;
+  });
   const placeholderTexts = [
     "Search for Products",
     "Search for Categories",
@@ -326,24 +327,27 @@ const wishlistCount = useSelector((state) => {
                 </div>
 
                 <div>
-                  <a className="topMenu" href="">
+                  <Link className="topMenu" to="/cliqcashwallet">
                     Track Orders
-                  </a>
+                  </Link>
                 </div>
                 <div>
-                  <a className="topMenu" href="">
-                    CLiQ Care
-                  </a>
+
+
+                   <Link className="topMenu" to="/ClicKCare">
+CLiQ Care                  </Link>
                 </div>
                 <div>
-                  <a className="topMenu" href="">
+                  <Link className="topMenu" to="/giftcard">
+                    {" "}
                     GiftCard
-                  </a>
+                  </Link>
                 </div>
                 <div>
-                  <a className="topMenu" href="">
+                  <Link className="topMenu" to="/cliqcashwallet">
+                    {" "}
                     CLiQ Cash
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -577,9 +581,6 @@ const wishlistCount = useSelector((state) => {
         </div>
       </div>
       {/* {showLoginModal && <Login onClose={() => setShowLoginModal(false)} />} */}
-      <div id="last">
-        <p>Footer to be addded</p>
-      </div>
     </div>
   );
 }
