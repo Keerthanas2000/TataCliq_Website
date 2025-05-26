@@ -1,13 +1,18 @@
 import React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
-import { removeFromWishlist } from "./actions/CartActions";
+import { removeFromWishlist, addTocart } from "./actions/CartActions";
 
 function Wishlist() {
   const dispatch = useDispatch();
   const wishlistItems = useSelector((state) => state.wishlist?.items || []);
 
   const handleRemoveItem = (item) => {
+    dispatch(removeFromWishlist(item));
+  };
+
+  const handleMoveToCart = (item) => {
+    dispatch(addTocart(item));
     dispatch(removeFromWishlist(item));
   };
 
@@ -52,15 +57,20 @@ function Wishlist() {
                           </span>
                         </div>
                       </div>
-                  
                     </div>
                   </div>
                   <div className="d-flex justify-content-end mt-2">
                     <button
-                      className="btn btn-sm btn-outline-secondary"
+                      className="btn btn-sm btn-outline-secondary me-2"
                       onClick={() => handleRemoveItem(item)}
                     >
                       Remove
+                    </button>
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => handleMoveToCart(item)}
+                    >
+                      Move to Cart
                     </button>
                   </div>
                 </div>

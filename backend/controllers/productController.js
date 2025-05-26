@@ -2,21 +2,31 @@ const Product = require('../model/product');
 const getProducts = async (req, res) => {
   try {
     const { category, subcategory, type, brand, sort } = req.query;
-    
+
     // Build filter object
     const filter = {};
-    
-    // Case-sensitive filters
-    if (category) filter.category = { $in: category.split(',') };
-    if (subcategory) filter.subcategory = { $in: subcategory.split(',') };
-    if (type) filter.type = { $in: type.split(',') };
-    
-    // Case-insensitive brand filter
-    if (brand) {
-      const brandRegex = brand.split(',').map(b => 
-        new RegExp(`^${b.trim()}$`, 'i')
-      );
-      filter.brand = { $in: brandRegex };
+
+    // Case-sensitive filters for category, subcategory, type
+    if (category && category.trim()) {
+      filter.category = { $in: category.split(',').map(c => c.trim()) };
+    }
+    if (subcategory && subcategory.trim()) {
+      filter.subcategory = { $in: subcategory.split(',').map(s => s.trim()) };
+    }
+    if (type && type.trim()) {
+      filter.type = { $in: type.split(',').map(t => t.trim()) };
+    }
+
+    // Case-insensitive brand filter with lowercase normalization
+    if (brand && brand.trim()) {
+      const brandRegex = brand
+        .split(',')
+        .map(b => b.trim().toLowerCase())
+        .filter(b => b)
+        .map(b => new RegExp(`^${b}$`, 'i'));
+      if (brandRegex.length > 0) {
+        filter.brand = { $in: brandRegex };
+      }
     }
 
     // Build query
@@ -44,25 +54,24 @@ const getProducts = async (req, res) => {
     const products = await query.exec();
 
     if (products.length === 0) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: "No products found matching your criteria",
-        suggestions: "Try broadening your filters"
+        message: 'No products found matching your criteria',
+        suggestions: 'Try broadening your filters',
       });
     }
 
     res.status(200).json({
       success: true,
       count: products.length,
-      products
+      products,
     });
-
   } catch (error) {
     console.error('Error fetching products:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Server error while fetching products",
-      error: error.message 
+      message: 'Server error while fetching products',
+      error: error.message,
     });
   }
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import axios from "axios";
 import Productitem from "./Productitem";
@@ -14,40 +14,67 @@ import {
 
 function Categorypage() {
   const location = useLocation();
-  const pathSegments = location.pathname.split("/");
-
-  const categoryData = {
-    category: pathSegments[2] ? pathSegments[2].replace(/-/g, " ") : null,
-    subcategory: pathSegments[3] ? pathSegments[3].replace(/-/g, " ") : null,
-    type: pathSegments[4] ? pathSegments[4].replace(/-/g, " ") : null,
-  };
-
   const [products, setProducts] = useState([]);
-  const [sortOption, setSortOption] = useState("popularity"); 
+  const [sortOption, setSortOption] = useState("popularity");
   const [filterOptions, setFilterOptions] = useState({
     departments: [],
     categories: [],
     productTypes: [],
+    brands: [],
   });
-  const [selectedDepartments, setSelectedDepartments] = useState(
-    categoryData.category ? [categoryData.category] : []
-  );
-  const [selectedCategories, setSelectedCategories] = useState(
-    categoryData.subcategory ? [categoryData.subcategory] : []
-  );
-  const [selectedProductTypes, setSelectedProductTypes] = useState(
-    categoryData.type ? [categoryData.type] : []
-  );
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch filter options
+  // Memoize path data extraction
+  const getPathData = useCallback(() => {
+    const pathSegments = location.pathname.split("/").filter((segment) => segment);
+    const isBrandPage = pathSegments[1] === "brand";
+    
+    return isBrandPage
+      ? { brand: pathSegments[2]?.replace(/-/g, " ") || null }
+      : {
+          category: pathSegments[1] ? pathSegments[1].replace(/-/g, " ") : null,
+          subcategory: pathSegments[2] ? pathSegments[2].replace(/-/g, " ") : null,
+          type: pathSegments[3] ? pathSegments[3].replace(/-/g, " ") : null,
+        };
+  }, [location.pathname]);
+
+  const [pathData, setPathData] = useState(getPathData());
+  const [selectedDepartments, setSelectedDepartments] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedProductTypes, setSelectedProductTypes] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+
+  // Update path data and filters when URL changes
+  useEffect(() => {
+    const newPathData = getPathData();
+    setPathData(newPathData);
+    
+    // Initialize filters based on URL
+    if (newPathData.brand) {
+      setSelectedBrands([newPathData.brand].filter(Boolean));
+      setSelectedDepartments([]);
+      setSelectedCategories([]);
+      setSelectedProductTypes([]);
+    } else {
+      setSelectedDepartments([newPathData.category].filter(Boolean));
+      setSelectedCategories([newPathData.subcategory].filter(Boolean));
+      setSelectedProductTypes([newPathData.type].filter(Boolean));
+      setSelectedBrands([]);
+    }
+  }, [location.pathname, getPathData]);
+
+  // Fetch filter options (runs once on mount)
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
         const response = await axios.get("http://localhost:5000/api/products");
+        const products = response.data.products || []; // Access the products array
+
         setFilterOptions({
-          departments: response.data.categories || [],
-          categories: response.data.subcategories || [],
-          productTypes: response.data.types || [],
+          departments: [...new Set(products.map((p) => p.category))].filter(Boolean),
+          categories: [...new Set(products.map((p) => p.subcategory))].filter(Boolean),
+          productTypes: [...new Set(products.map((p) => p.type))].filter(Boolean),
+          brands: [...new Set(products.map((p) => p.brand))].filter(Boolean),
         });
       } catch (error) {
         console.error("Error fetching filter options:", error);
@@ -57,62 +84,79 @@ function Categorypage() {
     fetchFilterOptions();
   }, []);
 
+  // Fetch products with debounce and cancellation
   useEffect(() => {
+    const isBrandPage = location.pathname.includes("/brand");
+    let isMounted = true;
+    const controller = new AbortController();
+
     const fetchProducts = async () => {
+      setIsLoading(true);
       try {
-        const params = {
-          category: selectedDepartments.join(",") || categoryData.category,
-          subcategory: selectedCategories.join(",") || categoryData.subcategory,
-          type: selectedProductTypes.join(",") || categoryData.type,
-        };
+        const params = isBrandPage
+          ? { brand: selectedBrands.join(",") || pathData.brand }
+          : {
+              category: selectedDepartments.join(",") || pathData.category,
+              subcategory: selectedCategories.join(",") || pathData.subcategory,
+              type: selectedProductTypes.join(",") || pathData.type,
+              brand: selectedBrands.join(","),
+            };
 
         const response = await axios.get("http://localhost:5000/api/products", {
-          params,
+          params: Object.fromEntries(Object.entries(params).filter(([_, v]) => v)),
+          signal: controller.signal,
         });
-        
-        let sortedProducts = [...response.data];
-        if (sortOption === "lowToHigh") {
-          sortedProducts.sort((a, b) => a.price - b.price);
-        } else if (sortOption === "highToLow") {
-          sortedProducts.sort((a, b) => b.price - a.price);
-        } else if (sortOption === "newest") {
-          sortedProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (isMounted) {
+          // Access the products array from the response data
+          const productsData = response.data.products || [];
+          
+          let sortedProducts = [...productsData];
+          if (sortOption === "lowToHigh") {
+            sortedProducts.sort((a, b) => a.price - b.price);
+          } else if (sortOption === "highToLow") {
+            sortedProducts.sort((a, b) => b.price - a.price);
+          } else if (sortOption === "newest") {
+            sortedProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          }
+          setProducts(sortedProducts);
         }
-        // "popularity" is default, no sorting needed
-        
-        setProducts(sortedProducts);
       } catch (error) {
-        console.error("Error fetching products:", error);
+        if (error.name !== "CanceledError" && isMounted) {
+          console.error("Error fetching products:", error);
+          setProducts([]);
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     };
 
-    fetchProducts();
+    const timer = setTimeout(fetchProducts, 300); // Debounce for 300ms
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, [
     selectedDepartments,
     selectedCategories,
     selectedProductTypes,
+    selectedBrands,
     sortOption,
-    location,
-    categoryData.category,
-    categoryData.subcategory,
-    categoryData.type,
+    pathData,
   ]);
 
+  const isBrandPage = location.pathname.includes("/brand");
 
   return (
     <Box sx={{ mt: 20, px: 4 }}>
       <Grid container spacing={2}>
         <Grid size={8}>
-          <Typography
-            variant="h5"
-            fontWeight="bold"
-            sx={{ mb: 2 }}
-            align="center"
-          >
-            {categoryData.type ||
-              categoryData.subcategory ||
-              categoryData.category ||
-              "Products"}
+          <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }} align="center">
+            {isBrandPage
+              ? pathData.brand || "Brand Products"
+              : pathData.type || pathData.subcategory || pathData.category || "Products"}
           </Typography>
         </Grid>
 
@@ -144,15 +188,14 @@ function Categorypage() {
 
             <Autocomplete
               multiple
+              
               options={filterOptions.departments}
               getOptionLabel={(option) => option}
               value={selectedDepartments}
               onChange={(e, newValue) => setSelectedDepartments(newValue)}
-              renderInput={(params) => (
-                <TextField {...params} label="Department" size="small" />
-              )}
+              renderInput={(params) => <TextField {...params} label="Department" size="small" />}
               sx={{ mb: 2 }}
-            />
+disabled            />
 
             <Autocomplete
               multiple
@@ -160,10 +203,9 @@ function Categorypage() {
               getOptionLabel={(option) => option}
               value={selectedCategories}
               onChange={(e, newValue) => setSelectedCategories(newValue)}
-              renderInput={(params) => (
-                <TextField {...params} label="Category" size="small" />
-              )}
+              renderInput={(params) => <TextField {...params} label="Category" size="small" />}
               sx={{ mb: 2 }}
+             disabled
             />
 
             <Autocomplete
@@ -172,17 +214,20 @@ function Categorypage() {
               getOptionLabel={(option) => option}
               value={selectedProductTypes}
               onChange={(e, newValue) => setSelectedProductTypes(newValue)}
-              renderInput={(params) => (
-                <TextField {...params} label="Product Type" size="small" />
-              )}
+              renderInput={(params) => <TextField {...params} label="Product Type" size="small" />}
               sx={{ mb: 2 }}
+disabled
             />
+
+          
           </Box>
         </Grid>
 
         <Grid size={9}>
           <Box sx={{ border: "1px solid #ddd", borderRadius: 2, p: 2 }}>
-            {products.length > 0 ? (
+            {isLoading ? (
+              <Typography>Loading products...</Typography>
+            ) : products.length > 0 ? (
               <Grid container spacing={2} justifyContent="space-evenly">
                 {products.map((prod) => (
                   <Grid size={3} key={prod._id}>
