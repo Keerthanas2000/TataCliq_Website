@@ -1,23 +1,69 @@
 const Product = require('../model/product');
-
 const getProducts = async (req, res) => {
   try {
-    const { category, subcategory, type } = req.query;
-
+    const { category, subcategory, type, brand, sort } = req.query;
+    
+    // Build filter object
     const filter = {};
-    if (category) filter.category = category;
-    if (subcategory) filter.subcategory = subcategory;
-    if (type) filter.type = type;
-
-    const productDocs = await Product.find(filter);
-
-    if (productDocs.length === 0) {
-      return res.status(404).json({ message: "No products found for given filters" });
+    
+    // Case-sensitive filters
+    if (category) filter.category = { $in: category.split(',') };
+    if (subcategory) filter.subcategory = { $in: subcategory.split(',') };
+    if (type) filter.type = { $in: type.split(',') };
+    
+    // Case-insensitive brand filter
+    if (brand) {
+      const brandRegex = brand.split(',').map(b => 
+        new RegExp(`^${b.trim()}$`, 'i')
+      );
+      filter.brand = { $in: brandRegex };
     }
 
-    res.status(200).json(productDocs);
+    // Build query
+    let query = Product.find(filter);
+
+    // Apply sorting
+    if (sort) {
+      switch (sort) {
+        case 'lowToHigh':
+          query = query.sort({ price: 1 });
+          break;
+        case 'highToLow':
+          query = query.sort({ price: -1 });
+          break;
+        case 'newest':
+          query = query.sort({ createdAt: -1 });
+          break;
+        case 'popularity':
+        default:
+          query = query.sort({ popularityScore: -1 });
+      }
+    }
+
+    // Execute query
+    const products = await query.exec();
+
+    if (products.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: "No products found matching your criteria",
+        suggestions: "Try broadening your filters"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error fetching products:', error);
+    res.status(500).json({ 
+      success: false,
+      message: "Server error while fetching products",
+      error: error.message 
+    });
   }
 };
 
