@@ -4,6 +4,10 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true, sparse: true },
   mobile: { type: String, unique: true, sparse: true },
   password: { type: String, required: true },
+
+    resetToken: { type: String, required: false },
+  resetTokenExpiry: { type: Number, required: false },
+
   name: { type: String, default: "Guest" },
   role: { type: String, default: "user" },
   type: { type: String, default: "signin" },

@@ -23,48 +23,84 @@ function Categorypage() {
   };
 
   const [products, setProducts] = useState([]);
-  const [sortOption, setSortOption] = useState("popularity");
+  const [sortOption, setSortOption] = useState("popularity"); 
+  const [filterOptions, setFilterOptions] = useState({
+    departments: [],
+    categories: [],
+    productTypes: [],
+  });
+  const [selectedDepartments, setSelectedDepartments] = useState(
+    categoryData.category ? [categoryData.category] : []
+  );
+  const [selectedCategories, setSelectedCategories] = useState(
+    categoryData.subcategory ? [categoryData.subcategory] : []
+  );
+  const [selectedProductTypes, setSelectedProductTypes] = useState(
+    categoryData.type ? [categoryData.type] : []
+  );
 
-  // Filter options
-  const departmentOptions = categoryData.category
-    ? [categoryData.category]
-    : [];
-  const categoryOptions = categoryData.subcategory
-    ? [categoryData.subcategory]
-    : [];
-  const productTypeOptions = categoryData.type ? [categoryData.type] : [];
+  // Fetch filter options
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const response = await axios.get("http://localhost:5000/api/products");
+        setFilterOptions({
+          departments: response.data.categories || [],
+          categories: response.data.subcategories || [],
+          productTypes: response.data.types || [],
+        });
+      } catch (error) {
+        console.error("Error fetching filter options:", error);
+      }
+    };
 
-  // Selected filter values
-  const [selectedDepartments, setSelectedDepartments] = useState([
-    categoryData.category,
-  ]);
-  const [selectedCategories, setSelectedCategories] = useState([categoryData.subcategory]);
-  const [selectedProductTypes, setSelectedProductTypes] = useState([categoryData.type]);
+    fetchFilterOptions();
+  }, []);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const params = {};
-
-        if (categoryData.category) params.category = categoryData.category;
-        if (categoryData.subcategory)
-          params.subcategory = categoryData.subcategory;
-        if (categoryData.type) params.type = categoryData.type;
+        const params = {
+          category: selectedDepartments.join(",") || categoryData.category,
+          subcategory: selectedCategories.join(",") || categoryData.subcategory,
+          type: selectedProductTypes.join(",") || categoryData.type,
+        };
 
         const response = await axios.get("http://localhost:5000/api/products", {
           params,
         });
-        setProducts(response.data);
+        
+        let sortedProducts = [...response.data];
+        if (sortOption === "lowToHigh") {
+          sortedProducts.sort((a, b) => a.price - b.price);
+        } else if (sortOption === "highToLow") {
+          sortedProducts.sort((a, b) => b.price - a.price);
+        } else if (sortOption === "newest") {
+          sortedProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+        // "popularity" is default, no sorting needed
+        
+        setProducts(sortedProducts);
       } catch (error) {
         console.error("Error fetching products:", error);
       }
     };
 
     fetchProducts();
-  }, [location]);
+  }, [
+    selectedDepartments,
+    selectedCategories,
+    selectedProductTypes,
+    sortOption,
+    location,
+    categoryData.category,
+    categoryData.subcategory,
+    categoryData.type,
+  ]);
+
 
   return (
-    <Box sx={{ mt: 15, px: 4 }}>
+    <Box sx={{ mt: 20, px: 4 }}>
       <Grid container spacing={2}>
         <Grid size={8}>
           <Typography
@@ -82,7 +118,7 @@ function Categorypage() {
 
         <Grid size={1}>
           <Typography variant="h6" sx={{ mb: 2 }} align="center">
-            sort by :{" "}
+            Sort by:
           </Typography>
         </Grid>
 
@@ -91,6 +127,7 @@ function Categorypage() {
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
             size="small"
+            fullWidth
           >
             <MenuItem value="popularity">Popularity</MenuItem>
             <MenuItem value="lowToHigh">Price: Low to High</MenuItem>
@@ -98,6 +135,7 @@ function Categorypage() {
             <MenuItem value="newest">Newest</MenuItem>
           </Select>
         </Grid>
+
         <Grid size={3}>
           <Box sx={{ border: "1px solid #ddd", borderRadius: 2, p: 2 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
@@ -106,10 +144,8 @@ function Categorypage() {
 
             <Autocomplete
               multiple
-              options={departmentOptions}
-              disabled
-                getOptionLabel={(option) => option?.label || ''}
-
+              options={filterOptions.departments}
+              getOptionLabel={(option) => option}
               value={selectedDepartments}
               onChange={(e, newValue) => setSelectedDepartments(newValue)}
               renderInput={(params) => (
@@ -120,10 +156,8 @@ function Categorypage() {
 
             <Autocomplete
               multiple
-              options={categoryOptions}
-              disabled
-                getOptionLabel={(option) => option?.label || ''}
-
+              options={filterOptions.categories}
+              getOptionLabel={(option) => option}
               value={selectedCategories}
               onChange={(e, newValue) => setSelectedCategories(newValue)}
               renderInput={(params) => (
@@ -134,11 +168,8 @@ function Categorypage() {
 
             <Autocomplete
               multiple
-              options={productTypeOptions}
-              disabled
-
-                getOptionLabel={(option) => option?.label || ''}
-
+              options={filterOptions.productTypes}
+              getOptionLabel={(option) => option}
               value={selectedProductTypes}
               onChange={(e, newValue) => setSelectedProductTypes(newValue)}
               renderInput={(params) => (
@@ -152,9 +183,9 @@ function Categorypage() {
         <Grid size={9}>
           <Box sx={{ border: "1px solid #ddd", borderRadius: 2, p: 2 }}>
             {products.length > 0 ? (
-              <Grid container spacing={2} justifyContent={"space-evenly"}>
+              <Grid container spacing={2} justifyContent="space-evenly">
                 {products.map((prod) => (
-                  <Grid size={3}>
+                  <Grid size={3} key={prod._id}>
                     <Productitem prod={prod} />
                   </Grid>
                 ))}
@@ -164,7 +195,6 @@ function Categorypage() {
             )}
           </Box>
         </Grid>
-        {/* Product List */}
       </Grid>
     </Box>
   );

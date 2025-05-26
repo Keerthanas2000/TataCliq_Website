@@ -227,12 +227,18 @@ function CartDetails() {
           </div>
         </div>
       ) : (
+
+
+
+  
+        <div className="row" style={{ marginTop: "120px" }}>
         <div className="text-center py-5">
           <h4 className="mb-3">Your bag is empty!</h4>
           <p className="text-muted mb-4">Let's fill it up shall we?</p>
           <Link to="/" className="btn btn-primary">
             Continue Shopping
           </Link>
+        </div>
         </div>
       )}
     </div>

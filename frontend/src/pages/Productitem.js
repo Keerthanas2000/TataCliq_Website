@@ -1,23 +1,30 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom"; // Add useNavigate
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import ShoppingBagIcon from "@mui/icons-material/ShoppingBag";
 import { Box, IconButton, Typography } from "@mui/material";
 import StarIcon from "@mui/icons-material/Star";
-
 import {
   addToWishlist,
   removeFromWishlist,
   addTocart,
   removeProd,
 } from "../actions/CartActions";
+import { setCurrentProduct } from "../actions/setCurrentProduct";
 
 function Productitem(props) {
   const dispatch = useDispatch();
+  const navigate = useNavigate(); // Initialize navigate
   const wishlistItems = useSelector((state) => state.wishlist.items);
   const isWishlisted = wishlistItems.some(
     (item) => item._id === props.prod._id
   );
+
+  const handleCurrProd = () => {
+    dispatch(setCurrentProduct(props.prod)); // Fix: Use props.prod
+    navigate("/details"); // Navigate to /details
+  };
 
   const handleWishlistToggle = () => {
     if (isWishlisted) {
@@ -26,8 +33,9 @@ function Productitem(props) {
       dispatch(addToWishlist(props.prod));
     }
   };
-const cartItems = useSelector((state) => state.cart.cartItems);
-const isCarted = cartItems?.some((item) => item._id === props.prod._id);
+
+  const cartItems = useSelector((state) => state.cart.cartItems);
+  const isCarted = cartItems?.some((item) => item._id === props.prod._id);
   const handleCartToggle = () => {
     if (isCarted) {
       dispatch(removeProd(props.prod));
@@ -48,16 +56,17 @@ const isCarted = cartItems?.some((item) => item._id === props.prod._id);
     >
       <Box sx={{ position: "relative" }}>
         <img
+          onClick={handleCurrProd} // Use handleCurrProd for consistency
           style={{
             height: "50vh",
             width: "100%",
             objectFit: "cover",
             borderRadius: "8px",
+            cursor: "pointer", // Add cursor pointer for better UX
           }}
           src={props.prod.images[0]}
           alt={props.prod.title}
         />
-
         <Box
           sx={{
             position: "absolute",
@@ -72,29 +81,29 @@ const isCarted = cartItems?.some((item) => item._id === props.prod._id);
             sx={{
               bgcolor: "white",
               "&:hover": { bgcolor: "#f5f5f5" },
-              color: isWishlisted ? "rgb(197, 137, 151);" : "inherit",
+              color: isWishlisted ? "rgb(197, 137, 151)" : "inherit",
             }}
             size="small"
             onClick={handleWishlistToggle}
           >
             <FavoriteIcon
               fontSize="small"
-              sx={{ color: isWishlisted ? "rgb(189, 16, 56);" : "inherit" }}
+              sx={{ color: isWishlisted ? "rgb(189, 16, 56)" : "inherit" }}
             />
           </IconButton>
-<IconButton
-  onClick={handleCartToggle}
-  sx={{
-    bgcolor: "white",
-    "&:hover": { bgcolor: "#f5f5f5" },
-    color: isCarted ? "rgb(197, 137, 151)" : "inherit",
-  }}
->
-  <ShoppingBagIcon
-    fontSize="small"
-    sx={{ color: isCarted ? "rgb(189, 16, 56)" : "inherit" }}
-  />
-</IconButton>
+          <IconButton
+            onClick={handleCartToggle}
+            sx={{
+              bgcolor: "white",
+              "&:hover": { bgcolor: "#f5f5f5" },
+              color: isCarted ? "rgb(197, 137, 151)" : "inherit",
+            }}
+          >
+            <ShoppingBagIcon
+              fontSize="small"
+              sx={{ color: isCarted ? "rgb(189, 16, 56)" : "inherit" }}
+            />
+          </IconButton>
         </Box>
       </Box>
 
@@ -114,7 +123,6 @@ const isCarted = cartItems?.some((item) => item._id === props.prod._id);
           <Typography variant="body2" color="green">
             10% off
           </Typography>
-
           <Box
             sx={{ display: "flex", alignItems: "center", marginLeft: "auto" }}
           >

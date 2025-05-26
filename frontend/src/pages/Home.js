@@ -36,6 +36,8 @@ function Home() {
         const path = categoryLink.getAttribute("data-path");
         if (path) {
           navigate(`/category/${path}`);
+          window.location.reload();
+
         }
         return;
       }
@@ -45,7 +47,8 @@ function Home() {
       if (brandLink) {
         e.preventDefault();
         const brandName = brandLink.textContent.trim();
-        navigate(`/brand/${brandName.toLowerCase().replace(/\s+/g, "-")}`);
+        navigate(`/brand/${brandName.toLowerCase().replace(/\s+/g, "-")}`);window.location.reload();
+
       }
     };
 

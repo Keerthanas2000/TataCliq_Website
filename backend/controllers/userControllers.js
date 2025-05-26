@@ -1,6 +1,8 @@
 const User = require("../model/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
+
 const sendEmail = require("../utils/sendEmail");
 
 exports.login = async (req, res) => {
@@ -49,7 +51,6 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required" });
@@ -61,12 +62,17 @@ exports.forgotPassword = async (req, res) => {
     expiresIn: "10m",
   });
 
-  const resetLink = `http://localhost:5000/reset-password/${token}`;
+  // Store resetToken and resetTokenExpiry
+  user.resetToken = token;
+  user.resetTokenExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+  await user.save();
+
+  const resetLink = `http://localhost:3000/reset-password/${token}`;
 
   await sendEmail(
     email,
-    "Password Reset Request",
-    `<p>Click <a href="${resetLink}">here</a> to reset your password. Link expires in 10 minutes.</p>`
+    "Tata Cliq Account Password Reset Request",
+    `<p>Click <a href="${resetLink}">here</a> to reset your password.Please note Link expires in 10 minutes.</p>`
   );
 
   res.status(200).json({ message: "Reset link sent to your email" });
@@ -74,17 +80,30 @@ exports.forgotPassword = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   const { token } = req.params;
-  const { newPassword } = req.body;
+  const { password } = req.body;
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_Key);
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await User.findByIdAndUpdate(decoded.id, { password: hashedPassword });
+    const user = await User.findOne({
+      _id: decoded.id,
+      resetToken: token,
+      resetTokenExpiry: { $gt: Date.now() },
+    });
 
-    res.status(200).json({ message: "Password updated successfully" });
-  } catch (err) {
-    console.error(err);
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token" });
+    }
+
+    // Hash the new password
+    user.password = await bcrypt.hash(password, 10);
+    user.resetToken = undefined;
+    user.resetTokenExpiry = undefined;
+
+    await user.save();
+    res.json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Error in /reset-password:", error.message);
     res.status(400).json({ message: "Invalid or expired token" });
   }
 };
@@ -174,5 +193,26 @@ exports.updateProfile = async (req, res) => {
         .json({ message: "Email or mobile already exists" });
     }
     res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+exports.validateToken = async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_Key);
+    const user = await User.findOne({
+      _id: decoded.id,
+      resetToken: token,
+      resetTokenExpiry: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+
+    res.status(200).json({ message: 'Token is valid' });
+  } catch (error) {
+    console.error('Error in /validate-token:', error.message);
+    res.status(400).json({ message: 'Invalid or expired token' });
   }
 };

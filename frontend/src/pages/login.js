@@ -2,7 +2,17 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import tatacliqlogo from "../images/tatacliqlogo.png";
-import { notify } from "../utils/toast"; // Import the notify function
+import { notify } from "../utils/toast";
+import {
+  InputAdornment,
+  IconButton,
+  TextField,
+  FormHelperText
+} from "@mui/material";
+import {
+  Visibility,
+  VisibilityOff
+} from "@mui/icons-material";
 
 function Login() {
   const navigate = useNavigate();
@@ -12,27 +22,67 @@ function Login() {
     mobile: "",
     password: "",
   });
-
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
 
-  // Handle input changes for email, mobile, and password
+  // Password validation function
+  const validatePassword = (password) => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (password.length < minLength) {
+      return "Password must be at least 8 characters long";
+    }
+    if (!hasUpperCase) {
+      return "Password must contain at least one uppercase letter";
+    }
+    if (!hasLowerCase) {
+      return "Password must contain at least one lowercase letter";
+    }
+    if (!hasNumber) {
+      return "Password must contain at least one number";
+    }
+    if (!hasSpecialChar) {
+      return "Password must contain at least one special character (!@#$%^&* etc.)";
+    }
+    return "";
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setCredentials((prev) => ({
       ...prev,
       [name]: value,
     }));
+
+    // Validate password in real-time
+    if (name === "password") {
+      setPasswordError(validatePassword(value));
+    }
   };
 
-  // Validate mobile format and login with mobile
+  // Toggle password visibility
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleMouseDownPassword = (event) => {
+    event.preventDefault();
+  };
+
+  // Validate mobile format
   const validatePhone = () => {
     const isValid = /^[6-9]\d{9}$/.test(credentials.mobile.trim());
     if (!isValid) {
       notify("Invalid mobile number. Please enter a valid 10-digit number.", "error");
-      return;
+      return false;
     }
-    handleMobileLogin();
+    return true;
   };
 
   // Call mobile login API
@@ -60,10 +110,7 @@ function Login() {
         password: credentials.password,
         email: credentials.email.trim(),
       });
-
-      console.log("api response", res);
       sessionStorage.setItem("userdata", JSON.stringify(res.data.user));
-
       res.data.user.type === "Register"
         ? navigate(`/viewprofile`)
         : navigate(`/`);
@@ -75,10 +122,20 @@ function Login() {
   // Submit login form
   const handleLogin = (e) => {
     e.preventDefault();
+    
+    // Final password validation check
+    const passwordValidationError = validatePassword(credentials.password);
+    if (passwordValidationError) {
+      notify(passwordValidationError, "error");
+      return;
+    }
+
     if (isEmailLogin) {
       handleEmailLogin();
     } else {
-      validatePhone();
+      if (validatePhone()) {
+        handleMobileLogin();
+      }
     }
   };
 
@@ -112,7 +169,7 @@ function Login() {
     >
       <div
         style={{
-          backgroundColor: "#000",
+          backgroundColor: "#fff",
           width: "100%",
           display: "flex",
           justifyContent: "center",
@@ -271,21 +328,46 @@ function Login() {
               >
                 Password
               </label>
-              <input
-                type="password"
+              <TextField
+                type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Enter Password"
                 value={credentials.password}
                 onChange={handleInputChange}
                 required
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  fontSize: "14px",
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!passwordError && credentials.password.length > 0}
+                InputProps={{
+                  style: {
+                    padding: "12px",
+                    fontSize: "14px",
+                  },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={handleClickShowPassword}
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                        size="small"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
                 }}
               />
+              {passwordError && credentials.password.length > 0 && (
+                <FormHelperText error style={{ marginTop: '4px', fontSize: '12px' }}>
+                  {passwordError}
+                </FormHelperText>
+              )}
+              {!passwordError && credentials.password.length >= 8 && (
+                <FormHelperText style={{ color: 'green', marginTop: '4px', fontSize: '12px' }}>
+Valid Password format                </FormHelperText>
+              )}
             </div>
 
             <p
