@@ -37,10 +37,21 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <Provider store={store}>
-        <BrowserRouter>
-          <Routes>
-            {/* Routes WITH navbar */}
-            <Route element={<Layout />}>
+        <>
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
+          <BrowserRouter>
+            <Routes>
+           <Route element={<Layout />}>
               <Route path="/adminlandingpage" element={<AdminLandingPage />} />
               <Route path="/success" element={<Success />} />
               <Route path="/category/*" element={<Categorypage />} />
@@ -55,21 +66,12 @@ function App() {
             </Route>
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
-          </Routes>
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-          />
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </>
       </Provider>
     </ThemeProvider>
   );
 }
+
 export default App;
