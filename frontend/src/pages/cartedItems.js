@@ -1,14 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 import { addTocart, removeProd, addToWishlist } from "../actions/CartActions";
+import {
+  Button,
+  TextField,
+  Checkbox,
+  FormControlLabel,
+  Typography,
+  Box,
+  Alert,
+} from "@mui/material";
 
 function CartDetails() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [newAddress, setNewAddress] = useState({ address: "", pincode: "" });
+  const [userDetails, setUserDetails] = useState({ name: "", email: "", mobile: "" });
 
   const cartItems = useSelector((state) => state.cart?.cartItems || []);
   const totalPrice = useSelector((state) => state.cart.totalPrice);
@@ -16,6 +30,37 @@ function CartDetails() {
   const taxes = useSelector((state) => state.cart.taxes);
   const grandTotal = useSelector((state) => state.cart.grandTotal);
   const user = useSelector((state) => state.user?.user);
+
+  useEffect(() => {
+    const token = user?.token || sessionStorage.getItem("token");
+    console.log("CartDetails - User:", user, "Token:", token); // Debug
+    if (!token) {
+      setError("Please log in to view cart details.");
+      navigate("/login");
+      return;
+    }
+
+    const fetchUserData = async () => {
+      try {
+        const [profileResponse, addressesResponse] = await Promise.all([
+          axios.get("http://localhost:5000/api/user/profile", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get("http://localhost:5000/api/user/addresses", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+        console.log("Profile Response:", profileResponse.data); // Debug
+        console.log("Addresses Response:", addressesResponse.data); // Debug
+        setUserDetails(profileResponse.data.user || {});
+        setAddresses(addressesResponse.data.addresses || []);
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+        setError(err.response?.data?.message || "Failed to load user data or addresses.");
+      }
+    };
+    fetchUserData();
+  }, [user, navigate]);
 
   const handleIncreaseQuantity = (item) => {
     dispatch(addTocart(item));
@@ -34,15 +79,74 @@ function CartDetails() {
     dispatch(removeProd(item, true));
   };
 
-  const handleCheckout = async () => {
-    if (!user) {
-      setError("Please log in to proceed with checkout.");
+  const handleAddAddress = async () => {
+    if (!newAddress.address || !newAddress.pincode) {
+      setError("Please fill in both address and pincode.");
+      return;
+    }
+    if (!newAddress.pincode.length === 6 || isNaN(newAddress.pincode)) {
+      setError("Pincode must be a 6-digit number");
+      return;
+    }
+    if (!user?._id) {
+      setError("Please log in to add an address.");
       navigate("/login");
       return;
     }
 
+    const token = user?.token || sessionStorage.getItem("token");
+    if (!token) {
+      setError("Please log in to add an address.");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const newAddressEntry = {
+        id: uuidv4(),
+        address: newAddress.address,
+        pincode: newAddress.pincode,
+      };
+      const updatedAddresses = [...addresses, newAddressEntry];
+      console.log("Sending addresses:", updatedAddresses); // Debug
+      const response = await axios.put(
+        "http://localhost:5000/api/user/updateProfile", 
+        {
+          _id: user._id,
+          email: userDetails.email,
+          mobile: userDetails.mobile,
+          name: userDetails.name,
+          addresses: updatedAddresses,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      console.log("Update Profile Response:", response.data); // Debug
+      setAddresses(response.data.user.addresses || updatedAddresses);
+      setNewAddress({ address: "", pincode: "" });
+      setError(null);
+    } catch (err) {
+      console.error("Error adding address:", err);
+      setError(err.response?.data?.message || "Failed to add address. Please try again.");
+    }
+  };
+
+  const handleAddressSelect = (address) => {
+    setSelectedAddress(address);
+  };
+
+  const handleCheckout = async () => {
+    const token = user?.token || sessionStorage.getItem("token");
+    if (!token || !user) {
+      setError("Please log in to proceed with checkout.");
+      navigate("/login");
+      return;
+    }
     if (cartItems.length === 0) {
       setError("Your cart is empty. Add items to proceed.");
+      return;
+    }
+    if (!selectedAddress) {
+      setError("Please select a delivery address.");
       return;
     }
 
@@ -51,30 +155,32 @@ function CartDetails() {
 
     try {
       const response = await axios.post(
-        "http://localhost:3010/api/payment/create-checkout-session",
+        "http://localhost:5000/api/payment/create-checkout-session",
         {
           cartItems,
           totalPrice,
           deliveryCharges,
           taxes,
           grandTotal,
+          deliveryAddress: selectedAddress,
         },
-        {
-          headers: { Authorization: `Bearer ${user.token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const { url, sessionId } = response.data;
       if (url && sessionId) {
         localStorage.setItem("stripeSessionId", sessionId);
-        localStorage.setItem("orderDetails", JSON.stringify({
-          cartItems,
-          totalPrice,
-          deliveryCharges,
-          taxes,
-          grandTotal,
-          userId: user._id,
-        }));
+        localStorage.setItem(
+          "orderDetails",
+          JSON.stringify({
+            cartItems,
+            totalPrice,
+            deliveryCharges,
+            taxes,
+            grandTotal,
+            userId: user._id,
+            deliveryAddress: selectedAddress,
+          })
+        );
         window.location.href = url;
       } else {
         throw new Error("No checkout URL or session ID returned");
@@ -93,13 +199,21 @@ function CartDetails() {
         <div className="row" style={{ marginTop: "120px" }}>
           <div className="col-md-8 pe-4">
             <h4 className="mb-4 fw-bold">My Bag</h4>
-
+            {userDetails.name && (
+              <Box mb={2}>
+                <Typography variant="subtitle1" gutterBottom>
+                  User Details
+                </Typography>
+                <Typography variant="body2">Name: {userDetails.name}</Typography>
+                {userDetails.email && <Typography variant="body2">Email: {userDetails.email}</Typography>}
+                {userDetails.mobile && <Typography variant="body2">Mobile: {userDetails.mobile}</Typography>}
+              </Box>
+            )}
             {cartItems.length > 0 && (
               <div className="alert alert-info mb-4">
                 Get this order at ₹{grandTotal.toFixed(2)} only!
               </div>
             )}
-
             <div className="card mb-3 p-3">
               {cartItems.map((item) => (
                 <div key={item._id} className="border-bottom pb-3 mb-3">
@@ -108,19 +222,13 @@ function CartDetails() {
                       src={item.images && item.images.length > 0 ? item.images[0] : "/images/fallback.jpg"}
                       alt={item.title || "Product"}
                       className="me-3"
-                      style={{
-                        width: "100px",
-                        height: "100px",
-                        objectFit: "cover",
-                      }}
+                      style={{ width: "100px", height: "100px", objectFit: "cover" }}
                     />
                     <div className="flex-grow-1">
                       <h6 className="mb-1">{item.title}</h6>
                       <div className="d-flex justify-content-between mb-2">
                         <div>
-                          <span className="text-danger fw-bold">
-                            ₹{item.price.toFixed(2)}
-                          </span>
+                          <span className="text-danger fw-bold">₹{item.price.toFixed(2)}</span>
                           <span className="text-decoration-line-through text-muted ms-2">
                             ₹{(item.price * 1.25).toFixed(2)}
                           </span>
@@ -129,16 +237,13 @@ function CartDetails() {
                           </span>
                         </div>
                       </div>
-
                       <div className="mb-2">
                         <small className="text-muted">Color: {item.color || "N/A"}</small>
                       </div>
-
                       <div className="d-flex align-items-center justify-content-between">
                         <div className="d-flex align-items-center">
                           <span className="me-2">Size: {item.size || "UK/MID-9"}</span>
                         </div>
-
                         <div className="d-flex align-items-center">
                           <button
                             className="btn btn-sm btn-outline-secondary"
@@ -158,7 +263,6 @@ function CartDetails() {
                       </div>
                     </div>
                   </div>
-
                   <div className="d-flex justify-content-end mt-2">
                     <button
                       className="btn btn-sm btn-outline-secondary me-2"
@@ -177,68 +281,117 @@ function CartDetails() {
               ))}
             </div>
           </div>
-
           <div className="col-md-4">
             <div className="card p-3">
               <h6 className="mb-3 fw-bold">Order Summary</h6>
-
               <div className="d-flex justify-content-between mb-2">
                 <span>Bag Total</span>
                 <span>₹{totalPrice.toFixed(2)}</span>
               </div>
-
               <div className="d-flex justify-content-between mb-2">
                 <span>Processing Fee</span>
                 <span className="text-success">FREE</span>
               </div>
-
               <div className="d-flex justify-content-between mb-2">
                 <span>Delivery Charges</span>
                 <span>₹{deliveryCharges.toFixed(2)}</span>
               </div>
-
               <div className="d-flex justify-content-between mb-2">
                 <span>Taxes</span>
                 <span>₹{taxes.toFixed(2)}</span>
               </div>
-
               <div className="border-top pt-3 mb-3">
                 <div className="d-flex justify-content-between fw-bold">
                   <span>Total</span>
                   <span>₹{grandTotal.toFixed(2)}</span>
                 </div>
               </div>
-
-              <button
-                className="btn btn-danger w-100 py-2"
-                style={{ backgroundColor: "#ff3e6c", border: "none" }}
+              <Typography variant="subtitle2" gutterBottom>
+                Select Delivery Address
+              </Typography>
+              {addresses.length > 0 ? (
+                addresses.map((address) => (
+                  <FormControlLabel
+                    key={address.id}
+                    control={
+                      <Checkbox
+                        checked={selectedAddress?.id === address.id}
+                        onChange={() => handleAddressSelect(address)}
+                      />
+                    }
+                    label={`${address.address}, ${address.pincode}`}
+                    sx={{ mb: 1 }}
+                  />
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary" mb={2}>
+                  No addresses saved. Add one below.
+                </Typography>
+              )}
+              <Typography variant="subtitle2" gutterBottom>
+                Add New Address
+              </Typography>
+              <TextField
+                fullWidth
+                label="Address"
+                value={newAddress.address}
+                onChange={(e) => setNewAddress({ ...newAddress, address: e.target.value })}
+                margin="dense"
+              />
+              <TextField
+                fullWidth
+                label="Pincode"
+                value={newAddress.pincode}
+                onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value })}
+                margin="dense"
+                inputProps={{ maxLength: 6 }}
+              />
+              <Button
+                variant="outlined"
+                color="primary"
+                fullWidth
+                sx={{ mt: 2, mb: 2 }}
+                onClick={handleAddAddress}
+              >
+                Add Address
+              </Button>
+              {selectedAddress && (
+                <Box mb={2}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Selected Address
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedAddress.address}, {selectedAddress.pincode}
+                  </Typography>
+                </Box>
+              )}
+              <Button
+                variant="contained"
+                color="error"
+                fullWidth
+                sx={{ py: 1.5, backgroundColor: "#ff3e6c" }}
                 onClick={handleCheckout}
                 disabled={loading || cartItems.length === 0}
               >
                 {loading ? "Processing..." : "Proceed to Checkout"}
-              </button>
-
+              </Button>
               {error && (
-                <div className="alert alert-danger mt-2" role="alert">
+                <Alert severity="error" sx={{ mt: 2 }}>
                   {error}
-                </div>
+                </Alert>
               )}
             </div>
           </div>
         </div>
       ) : (
-
-
-
-  
         <div className="row" style={{ marginTop: "120px" }}>
-        <div className="text-center py-5">
-          <h4 className="mb-3">Your bag is empty!</h4>
-          <p className="text-muted mb-4">Let's fill it up shall we?</p>
-          <Link to="/" className="btn btn-primary">
-            Continue Shopping
-          </Link>
-        </div>
+          <div className="text-center py-5">
+            <h4 className="mb-3">Your bag is empty!</h4>
+            <p className="text-muted mb-4">Let's fill it up shall we?</p>
+            <Link to="/" className="btn btn-primary">
+              Continue Shopping
+            </Link>
+          </div>
         </div>
       )}
     </div>
