@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import axios from "axios";
 import tatacliqlogo from "../images/tatacliqlogo.png";
 import { notify } from "../utils/toast";
@@ -7,15 +8,14 @@ import {
   InputAdornment,
   IconButton,
   TextField,
-  FormHelperText
+  FormHelperText,
 } from "@mui/material";
-import {
-  Visibility,
-  VisibilityOff
-} from "@mui/icons-material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { setUser } from "../reducers/userReducer";
 
 function Login() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [isEmailLogin, setIsEmailLogin] = useState(true);
   const [credentials, setCredentials] = useState({
     email: "",
@@ -27,7 +27,6 @@ function Login() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
 
-  // Password validation function
   const validatePassword = (password) => {
     const minLength = 8;
     const hasUpperCase = /[A-Z]/.test(password);
@@ -60,13 +59,11 @@ function Login() {
       [name]: value,
     }));
 
-    // Validate password in real-time
     if (name === "password") {
       setPasswordError(validatePassword(value));
     }
   };
 
-  // Toggle password visibility
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
   };
@@ -75,7 +72,6 @@ function Login() {
     event.preventDefault();
   };
 
-  // Validate mobile format
   const validatePhone = () => {
     const isValid = /^[6-9]\d{9}$/.test(credentials.mobile.trim());
     if (!isValid) {
@@ -85,67 +81,47 @@ function Login() {
     return true;
   };
 
-  // Call mobile login API
-  const handleMobileLogin = async () => {
-    try {
-      const res = await axios.post("http://localhost:5000/api/user/login", {
-        mobile: credentials.mobile.trim(),
-        password: credentials.password,
-        email: credentials.email.trim(),
-      });
-      sessionStorage.setItem("userdata", JSON.stringify(res.data.user));
-      res.data.user.type === "Register"
-        ? navigate(`/viewprofile`)
-        : navigate(`/`);
-    } catch (error) {
-      notify(error.response?.data?.message || "Something went wrong", "error");
-    }
-  };
-
-  // Call email login API
-  const handleEmailLogin = async () => {
-    try {
-      const res = await axios.post("http://localhost:5000/api/user/login", {
-        mobile: credentials.mobile.trim(),
-        password: credentials.password,
-        email: credentials.email.trim(),
-      });
-      sessionStorage.setItem("userdata", JSON.stringify(res.data.user));
-      res.data.user.type === "Register"
-        ? navigate(`/viewprofile`)
-        : navigate(`/`);
-    } catch (error) {
-      notify(error.response?.data?.message || "Something went wrong", "error");
-    }
-  };
-
-  // Submit login form
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    
-    // Final password validation check
+
     const passwordValidationError = validatePassword(credentials.password);
     if (passwordValidationError) {
       notify(passwordValidationError, "error");
       return;
     }
 
-    if (isEmailLogin) {
-      handleEmailLogin();
-    } else {
-      if (validatePhone()) {
-        handleMobileLogin();
-      }
+    if (!isEmailLogin && !validatePhone()) {
+      return;
+    }
+
+    try {
+      const payload = {
+        password: credentials.password,
+        ...(isEmailLogin ? { email: credentials.email.trim() } : { mobile: credentials.mobile.trim() }),
+      };
+      const res = await axios.post("http://localhost:5000/api/user/login", payload);
+      const { token, user } = res.data;
+      
+      // Store in sessionStorage
+      sessionStorage.setItem("token", token);
+      sessionStorage.setItem("userdata", JSON.stringify(user));
+      
+      // Store in Redux
+      dispatch(setUser({ ...user, token }));
+
+      notify("Login successful!", "success");
+      user.type === "Register" ? navigate("/viewprofile") : navigate("/");
+    } catch (error) {
+      notify(error.response?.data?.message || "Something went wrong", "error");
     }
   };
 
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post(
-        "http://localhost:5000/api/user/forgot-password",
-        { email: forgotEmail }
-      );
+      const res = await axios.post("http://localhost:5000/api/user/forgot-password", {
+        email: forgotEmail,
+      });
       notify(res.data.message, "success");
       setShowForgotPassword(false);
     } catch (error) {
@@ -177,22 +153,15 @@ function Login() {
           marginBottom: "20px",
         }}
       >
-        <img
-          src={tatacliqlogo}
-          alt="Tata CLiQ Logo"
-          style={{ width: "200px" }}
-        />
+        <img src={tatacliqlogo} alt="Tata CLiQ Logo" style={{ width: "200px" }} />
       </div>
 
       {showForgotPassword ? (
         <div style={{ width: "100%", maxWidth: "350px" }}>
-          <h2 style={{ fontSize: "18px", marginBottom: "20px" }}>
-            Reset Password
-          </h2>
+          <h2 style={{ fontSize: "18px", marginBottom: "20px" }}>Reset Password</h2>
           <p style={{ fontSize: "14px", marginBottom: "20px" }}>
             Enter your email to receive a password reset link
           </p>
-
           <form onSubmit={handleForgotPassword}>
             <div style={{ marginBottom: "20px" }}>
               <input
@@ -210,7 +179,6 @@ function Login() {
                 }}
               />
             </div>
-
             <button
               type="submit"
               style={{
@@ -228,7 +196,6 @@ function Login() {
               SEND RESET LINK
             </button>
           </form>
-
           <p
             style={{
               color: "#ff3e6c",
@@ -243,32 +210,13 @@ function Login() {
         </div>
       ) : (
         <>
-          <p
-            style={{
-              fontSize: "16px",
-              fontWeight: "bold",
-              marginBottom: "30px",
-            }}
-          >
-            {isEmailLogin
-              ? "Login / Sign up with your email address"
-              : "Login / Sign up with your mobile number"}
+          <p style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "30px" }}>
+            {isEmailLogin ? "Login / Sign up with your email address" : "Login / Sign up with your mobile number"}
           </p>
-
-          <form
-            onSubmit={handleLogin}
-            style={{ width: "100%", maxWidth: "350px" }}
-          >
+          <form onSubmit={handleLogin} style={{ width: "100%", maxWidth: "350px" }}>
             {isEmailLogin ? (
               <div style={{ marginBottom: "20px", textAlign: "left" }}>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                    marginBottom: "8px",
-                  }}
-                >
+                <label style={{ display: "block", fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
                   Email Address
                 </label>
                 <input
@@ -289,14 +237,7 @@ function Login() {
               </div>
             ) : (
               <div style={{ marginBottom: "20px", textAlign: "left" }}>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                    marginBottom: "8px",
-                  }}
-                >
+                <label style={{ display: "block", fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
                   Mobile Number
                 </label>
                 <input
@@ -316,16 +257,8 @@ function Login() {
                 />
               </div>
             )}
-
             <div style={{ marginBottom: "10px", textAlign: "left" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "14px",
-                  fontWeight: "bold",
-                  marginBottom: "8px",
-                }}
-              >
+              <label style={{ display: "block", fontSize: "14px", fontWeight: "bold", marginBottom: "8px" }}>
                 Password
               </label>
               <TextField
@@ -340,10 +273,7 @@ function Login() {
                 size="small"
                 error={!!passwordError && credentials.password.length > 0}
                 InputProps={{
-                  style: {
-                    padding: "12px",
-                    fontSize: "14px",
-                  },
+                  style: { padding: "12px", fontSize: "14px" },
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
@@ -360,16 +290,16 @@ function Login() {
                 }}
               />
               {passwordError && credentials.password.length > 0 && (
-                <FormHelperText error style={{ marginTop: '4px', fontSize: '12px' }}>
+                <FormHelperText error style={{ marginTop: "4px", fontSize: "12px" }}>
                   {passwordError}
                 </FormHelperText>
               )}
               {!passwordError && credentials.password.length >= 8 && (
-                <FormHelperText style={{ color: 'green', marginTop: '4px', fontSize: '12px' }}>
-Valid Password format                </FormHelperText>
+                <FormHelperText style={{ color: "green", marginTop: "4px", fontSize: "12px" }}>
+                  Valid Password format
+                </FormHelperText>
               )}
             </div>
-
             <p
               style={{
                 textAlign: "right",
@@ -382,7 +312,6 @@ Valid Password format                </FormHelperText>
             >
               Forgot Password?
             </p>
-
             <button
               type="submit"
               style={{
@@ -400,7 +329,6 @@ Valid Password format                </FormHelperText>
               LOGIN
             </button>
           </form>
-
           <p
             style={{
               margin: "20px 0",
@@ -413,23 +341,13 @@ Valid Password format                </FormHelperText>
           >
             {isEmailLogin ? "USE MOBILE NUMBER" : "USE EMAIL ADDRESS"}
           </p>
-
-          <p
-            style={{
-              fontSize: "12px",
-              color: "#999",
-              marginBottom: "20px",
-              lineHeight: "1.5",
-            }}
-          >
-            This site is protected by reCAPTCHA and the Google Privacy Policy
-            and Terms of Service apply.
+          <p style={{ fontSize: "12px", color: "#999", marginBottom: "20px", lineHeight: "1.5" }}>
+            This site is protected by reCAPTCHA and the Google Privacy Policy and Terms of Service apply.
             <br />
             By continuing, you agree to our Terms of Use and Privacy Policy.
           </p>
         </>
       )}
-
       <button
         onClick={() => navigate("/")}
         style={{

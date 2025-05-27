@@ -1,26 +1,22 @@
 export const addTocart = (prod) => ({
-      payload: prod,
-      type: "add_to_cart"
-    });
-    
+  type: "ADD_TO_CART",
+  payload: prod,
+});
 
-    export const removeProd = (prod) => ({
-      payload: prod,
-      type: "remove_from_cart"
-    });
-    
+export const removeProd = (prod, removeCompletely = false) => ({
+  type: "REMOVE_FROM_ITEM",
+  payload: { prod, removeCompletely },
+});
 
-    export const Incrementprod = (prod) => ({
-      payload: prod,
-      type: "increment_prod"
-    });
-    
+export const incrementProd = (prod) => ({
+  type: "INCREMENT_PROD",
+  payload: prod,
+});
 
-    export const Decrementprod = (prod) => ({
-      payload: prod,
-      type: "decrement_prod"
-    });
-    // actions/wishlistActions.js
+export const decrementProd = (prod) => ({
+  type: "DECREMENT_PROD",
+  payload: prod,
+});
 
 export const addToWishlist = (prod) => ({
   type: "add_to_wishlist",
@@ -32,3 +28,6 @@ export const removeFromWishlist = (product) => ({
   payload: product,
 });
 
+export const clearCart = () => ({
+  type: "CLEAR_CART",
+});

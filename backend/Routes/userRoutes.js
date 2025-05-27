@@ -1,6 +1,3 @@
-
-
-
 const express = require("express");
 const router = express.Router();
 const {
@@ -8,13 +5,18 @@ const {
   forgotPassword,
   resetPassword,
   updateProfile,
-
   validateToken,
+  getAddresses,
+  getProfile,
+  authMiddleware,
 } = require("../controllers/userControllers");
 
 router.post("/login", login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
-router.put("/updateProfile", updateProfile);
-router.get('/validate-token/:token', validateToken);
+router.put("/updateProfile", authMiddleware, updateProfile);
+router.get("/validate-token/:token", validateToken);
+router.get("/addresses", authMiddleware, getAddresses);
+router.get("/profile", authMiddleware, getProfile);
+
 module.exports = router;

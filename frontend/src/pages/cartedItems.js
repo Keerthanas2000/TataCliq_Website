@@ -33,7 +33,7 @@ function CartDetails() {
 
   useEffect(() => {
     const token = user?.token || sessionStorage.getItem("token");
-    console.log("CartDetails - User:", user, "Token:", token); // Debug
+    console.log("CartDetails - User:", user, "Token:", token);
     if (!token) {
       setError("Please log in to view cart details.");
       navigate("/login");
@@ -50,8 +50,8 @@ function CartDetails() {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-        console.log("Profile Response:", profileResponse.data); // Debug
-        console.log("Addresses Response:", addressesResponse.data); // Debug
+        console.log("Profile Response:", profileResponse.data);
+        console.log("Addresses Response:", addressesResponse.data);
         setUserDetails(profileResponse.data.user || {});
         setAddresses(addressesResponse.data.addresses || []);
       } catch (err) {
@@ -84,8 +84,8 @@ function CartDetails() {
       setError("Please fill in both address and pincode.");
       return;
     }
-    if (!newAddress.pincode.length === 6 || isNaN(newAddress.pincode)) {
-      setError("Pincode must be a 6-digit number");
+    if (newAddress.pincode.length !== 6 || isNaN(newAddress.pincode)) {
+      setError("Pincode must be a 6-digit number.");
       return;
     }
     if (!user?._id) {
@@ -108,9 +108,9 @@ function CartDetails() {
         pincode: newAddress.pincode,
       };
       const updatedAddresses = [...addresses, newAddressEntry];
-      console.log("Sending addresses:", updatedAddresses); // Debug
+      console.log("Sending addresses:", updatedAddresses);
       const response = await axios.put(
-        "http://localhost:5000/api/user/updateProfile", 
+        "http://localhost:5000/api/user/updateProfile",
         {
           _id: user._id,
           email: userDetails.email,
@@ -120,7 +120,7 @@ function CartDetails() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      console.log("Update Profile Response:", response.data); // Debug
+      console.log("Update Profile Response:", response.data);
       setAddresses(response.data.user.addresses || updatedAddresses);
       setNewAddress({ address: "", pincode: "" });
       setError(null);
@@ -134,64 +134,69 @@ function CartDetails() {
     setSelectedAddress(address);
   };
 
-  const handleCheckout = async () => {
-    const token = user?.token || sessionStorage.getItem("token");
-    if (!token || !user) {
-      setError("Please log in to proceed with checkout.");
-      navigate("/login");
-      return;
-    }
-    if (cartItems.length === 0) {
-      setError("Your cart is empty. Add items to proceed.");
-      return;
-    }
-    if (!selectedAddress) {
-      setError("Please select a delivery address.");
-      return;
-    }
+const handleCheckout = async () => {
+  const token = user?.token || sessionStorage.getItem("token");
+  if (!token || !user) {
+    setError("Please log in to proceed with checkout.");
+    navigate("/login");
+    return;
+  }
+  if (cartItems.length === 0) {
+    setError("Your cart is empty. Add items to proceed.");
+    return;
+  }
+  if (!selectedAddress) {
+    setError("Please select a delivery address.");
+    return;
+  }
 
-    setLoading(true);
-    setError(null);
+  setLoading(true);
+  setError(null);
 
-    try {
-      const response = await axios.post(
-        "http://localhost:5000/api/payment/create-checkout-session",
-        {
-          cartItems,
-          totalPrice,
-          deliveryCharges,
-          taxes,
-          grandTotal,
-          deliveryAddress: selectedAddress,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const { url, sessionId } = response.data;
-      if (url && sessionId) {
-        localStorage.setItem("stripeSessionId", sessionId);
-        localStorage.setItem(
-          "orderDetails",
-          JSON.stringify({
-            cartItems,
-            totalPrice,
-            deliveryCharges,
-            taxes,
-            grandTotal,
-            userId: user._id,
-            deliveryAddress: selectedAddress,
-          })
-        );
-        window.location.href = url;
-      } else {
-        throw new Error("No checkout URL or session ID returned");
-      }
-    } catch (err) {
-      console.error("Checkout error:", err);
-      setError(err.response?.data?.message || "Failed to initiate checkout. Please try again.");
-    } finally {
-      setLoading(false);
+  try {
+    const payload = {
+      cartItems: cartItems.map((item) => ({
+        _id: item._id,
+        title: item.title || "Unknown Product", // Add title
+        price: item.price,
+        quantity: item.quantity,
+        total_item_price: item.price * item.quantity,
+        size: item.size || "N/A",
+        color: item.color || "N/A",
+        images: item.images || ["/images/fallback.jpg"],
+      })),
+      totalPrice,
+      deliveryCharges,
+      taxes,
+      grandTotal,
+      deliveryAddress: {
+        id: selectedAddress.id,
+        address: selectedAddress.address,
+        pincode: selectedAddress.pincode,
+      },
+    };
+    console.log("Checkout Payload:", payload);
+
+    const response = await axios.post(
+      "http://localhost:5000/api/payment/create",
+      payload,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const { url, sessionId } = response.data;
+    if (url && sessionId) {
+      localStorage.setItem("stripeSessionId", sessionId);
+      localStorage.setItem("orderDetails", JSON.stringify(payload));
+      window.location.href = url;
+    } else {
+      throw new Error("No checkout URL or session ID returned");
     }
-  };
+  } catch (err) {
+    console.error("Checkout error:", err);
+    setError(err.response?.data?.error || "Failed to initiate checkout. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="container mt-4" style={{ maxWidth: "1200px" }}>

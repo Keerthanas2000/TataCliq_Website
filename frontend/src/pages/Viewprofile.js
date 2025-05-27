@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import axios from "axios";
 import {
   Grid,
@@ -13,29 +14,35 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { notify } from "../utils/toast";
+import { v4 as uuidv4 } from "uuid";
 
 function Viewprofile() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [error, setError] = useState("");
-
+  const user = useSelector((state) => state.user?.user); 
   useEffect(() => {
-    try {
-      const storedData = sessionStorage.getItem("userdata");
-      if (storedData) {
-        const parsedData = JSON.parse(storedData);
+    const storedData = sessionStorage.getItem("userdata");
+    const token = sessionStorage.getItem("token");
+    
+    if (user || (storedData && token)) {
+      try {
+        const parsedData = storedData ? JSON.parse(storedData) : user;
         setUserData({
-          ...parsedData,
-          address: parsedData.address || [],
+          _id: parsedData._id,
+          email: parsedData.email || "",
+          mobile: parsedData.mobile || "",
+          name: parsedData.name || "",
+          addresses: parsedData.addresses || [], 
         });
-      } else {
+      } catch (e) {
+        console.log("Error parsing userdata:", e);
         navigate("/login");
       }
-    } catch (e) {
-      console.error("Error parsing userdata:", e);
+    } else {
       navigate("/login");
     }
-  }, [navigate]);
+  }, [navigate, user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -44,30 +51,30 @@ function Viewprofile() {
 
   const handleAddressChange = (index, field, value) => {
     setUserData((prev) => {
-      const updatedAddress = [...prev.address];
-      updatedAddress[index] = { ...updatedAddress[index], [field]: value };
-      return { ...prev, address: updatedAddress };
+      const updatedAddresses = [...prev.addresses];
+      updatedAddresses[index] = { ...updatedAddresses[index], [field]: value };
+      return { ...prev, addresses: updatedAddresses };
     });
   };
 
   const addAddressField = () => {
     setUserData((prev) => ({
       ...prev,
-      address: [...prev.address, { address: "", pincode: "" }],
+      addresses: [...prev.addresses, { id: uuidv4(), address: "", pincode: "" }],
     }));
   };
 
   const removeAddressField = (index) => {
     setUserData((prev) => ({
       ...prev,
-      address: prev.address.filter((_, i) => i !== index),
+      addresses: prev.addresses.filter((_, i) => i !== index),
     }));
   };
 
   const handleSave = async () => {
-    if (!userData.email    || !userData.mobile) {
-      setError(" email and  mobile is required");
-      notify(" email and  mobile is required", "error");
+    if (!userData.email && !userData.mobile) {
+      setError("At least one of email or mobile is required");
+      notify("At least one of email or mobile is required", "error");
       return;
     }
     if (userData.email && !/^\S+@\S+\.\S+$/.test(userData.email)) {
@@ -80,32 +87,47 @@ function Viewprofile() {
       notify("Invalid mobile number", "error");
       return;
     }
-    for (let i = 0; i < userData.address.length; i++) {
-      const pincode = userData.address[i].pincode || "";
-      if (pincode && pincode.length !== 6) {
+    for (let i = 0; i < userData.addresses.length; i++) {
+      const addr = userData.addresses[i];
+      if (!addr.address) {
+        setError(`Address ${i + 1} cannot be empty`);
+        notify(`Address ${i + 1} cannot be empty`, "error");
+        return;
+      }
+      if (!addr.pincode || addr.pincode.length !== 6) {
         setError(`Pincode for Address ${i + 1} must be exactly 6 digits`);
-        notify(
-          `Pincode for Address ${i + 1} must be exactly 6 digits`,
-          "error"
-        );
+        notify(`Pincode for Address ${i + 1} must be exactly 6 digits`, "error");
         return;
       }
     }
 
+    const token = sessionStorage.getItem("token") || user?.token;
+    if (!token) {
+      setError("Please log in to update profile");
+      notify("Please log in to update profile", "error");
+      navigate("/login");
+      return;
+    }
+
     try {
+      console.log("Token:", token); // Debug token
       const response = await axios.put(
-        "http://localhost:5000/api/user/updateProfile",
+        "http://localhost:5000/api/user/updateProfile", // Fixed endpoint
         {
+          _id: userData._id,
           email: userData.email,
           mobile: userData.mobile,
           name: userData.name,
-          address: userData.address,
-          _id: userData._id
+          addresses: userData.addresses.map(({ address, pincode, id }) => ({
+            id: id || uuidv4(),
+            address,
+            pincode,
+          })),
         },
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -133,7 +155,7 @@ function Viewprofile() {
     <Box sx={{ mx: 4, mt: 20, mb: 4, position: "relative", minHeight: "80vh" }}>
       <Box
         sx={{
-          maxHeight: "calc(80vh - 80px)", // Adjust for button height and padding
+          maxHeight: "calc(80vh - 80px)",
           overflowY: "auto",
           pr: 2,
           pb: 10,
@@ -149,7 +171,7 @@ function Viewprofile() {
             <Button
               variant="contained"
               onClick={handleSave}
-              sx={{ textTransform: "none", bgcolor: "#e6335d;" }}
+              sx={{ textTransform: "none", bgcolor: "#e6335d" }}
             >
               Update Profile
             </Button>
@@ -163,7 +185,6 @@ function Viewprofile() {
               fullWidth
               variant="outlined"
               size="small"
-            //   disabled={!!userData.email}
             />
           </Grid>
           <Grid size={6}>
@@ -175,15 +196,13 @@ function Viewprofile() {
               fullWidth
               variant="outlined"
               size="small"
-
-                  //    disabled={!!userData.mobile}
             />
           </Grid>
           <Grid size={6}>
             <TextField
               label="Name"
               name="name"
-              value={userData.name}
+              value={userData.name || ""}
               onChange={handleInputChange}
               fullWidth
               variant="outlined"
@@ -204,7 +223,7 @@ function Viewprofile() {
               Add Address
             </Button>
           </Grid>
-          {userData?.address?.map((addr, index) => (
+          {userData?.addresses?.map((addr, index) => (
             <>
               <Grid size={12} sm={10}>
                 <Typography variant="h6" fontWeight="bold">
@@ -240,7 +259,7 @@ function Viewprofile() {
               </Grid>
               <Grid size={2} sm={2}>
                 <IconButton
-                  color="black"
+                  color="error"
                   onClick={() => removeAddressField(index)}
                 >
                   <DeleteIcon />
@@ -249,6 +268,7 @@ function Viewprofile() {
             </>
           ))}
         </Grid>
+       
       </Box>
     </Box>
   );
