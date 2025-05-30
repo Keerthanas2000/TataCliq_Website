@@ -1,8 +1,8 @@
 const express = require("express");
 const Stripe = require("stripe");
 const { v4: uuidv4 } = require("uuid");
-const Order=require("../model/Order")
-const User= require("../model/user")
+const Order = require("../model/Order");
+const User = require("../model/user");
 const { verifyToken } = require("../middleware/verification");
 
 const router = express.Router();
@@ -25,14 +25,23 @@ router.post("/create", verifyToken, async (req, res) => {
     if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
       return res.status(400).json({ error: "Cart items are required" });
     }
-    if (!deliveryAddress || !deliveryAddress.id || !deliveryAddress.address || !deliveryAddress.pincode) {
-      return res.status(400).json({ error: "Valid delivery address is required" });
+    if (
+      !deliveryAddress ||
+      !deliveryAddress.id ||
+      !deliveryAddress.address ||
+      !deliveryAddress.pincode
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Valid delivery address is required" });
     }
 
     // Validate cartItems
     for (const item of cartItems) {
       if (!item.title) {
-        return res.status(400).json({ error: "Each cart item must have a title" });
+        return res
+          .status(400)
+          .json({ error: "Each cart item must have a title" });
       }
     }
 
@@ -54,7 +63,8 @@ router.post("/create", verifyToken, async (req, res) => {
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      success_url: "http://localhost:3000/payment-success?session_id={CHECKOUT_SESSION_ID}",
+      success_url:
+        "http://localhost:3000/payment-success?session_id={CHECKOUT_SESSION_ID}",
       cancel_url: "http://localhost:3000/cart",
       metadata: { userId },
     });
@@ -69,6 +79,10 @@ router.post("/create", verifyToken, async (req, res) => {
       size: item.size || "N/A",
       color: item.color || "N/A",
       image: item.images?.[0] || "/images/fallback.jpg",
+
+      sellerId: item.sellerId,
+      sellername: item.sellername,
+      packagestatus: "order_placed",
     }));
 
     const order = new Order({
@@ -99,8 +113,14 @@ router.post("/create", verifyToken, async (req, res) => {
 
     res.status(201).json({ url: session.url, sessionId: session.id });
   } catch (error) {
-    console.error("Error creating checkout session:", error.message, error.stack);
-    res.status(500).json({ error: `Failed to create checkout session: ${error.message}` });
+    console.error(
+      "Error creating checkout session:",
+      error.message,
+      error.stack
+    );
+    res
+      .status(500)
+      .json({ error: `Failed to create checkout session: ${error.message}` });
   }
 });
 
@@ -115,6 +135,29 @@ router.get("/verify/:sessionId", verifyToken, async (req, res) => {
   } catch (error) {
     console.error("Error verifying payment:", error.message, error.stack);
     res.status(500).json({ error: "Failed to verify payment" });
+  }
+});
+
+router.post("/success", verifyToken, async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    const orderDetails = JSON.parse(localStorage.getItem("orderDetails"));
+    const user = await User.findById(req.user.id);
+    user.cliqCash -= orderDetails.cliqCashUsed;
+    user.giftCard -= orderDetails.giftCardUsed;
+    await user.save();
+    const order = new Order({
+      ...orderDetails,
+      userId: req.user.id,
+      stripeSessionId: sessionId,
+      status: "success",
+    });
+    await order.save();
+    localStorage.removeItem("stripeSessionId");
+    localStorage.removeItem("orderDetails");
+    res.status(200).json({ order });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

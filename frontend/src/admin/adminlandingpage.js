@@ -11,9 +11,7 @@ import ListItemText from "@mui/material/ListItemText";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import ViewOrders from "./viewOrders";
 import AddProducts from "./addProducts";
-import DeleteProducts from "./deleteProducts";
-import UpdateProducts from "./updateproducts";
-import ViewProducts from "./viewproducts";
+
 
 import Companylogo from "../images/TataShortlogo.png";
 import Tatacliqlog from "../images/tatacliqlogo.png";
@@ -84,10 +82,8 @@ function AdminLandingPage() {
   const menuItems = [
     "Home",
     "View orders",
-    "View products",
     "Add product",
-    "Update product",
-    "Delete product",
+  
   ];
 
   const DrawerList = () => (
@@ -129,12 +125,7 @@ function AdminLandingPage() {
         return <ViewOrders />;
       case "Add product":
         return <AddProducts />;
-      case "Update product":
-        return <UpdateProducts />;
-      case "Delete product":
-        return <DeleteProducts />;
-      case "View products":
-        return <ViewProducts />;
+     
       default:
         return (
           <Typography variant="h5">
@@ -147,7 +138,7 @@ function AdminLandingPage() {
   return (
     <ThemeProvider theme={theme}>
       <Box
-        sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
+        sx={{ display: "flex", flexDirection: "column", minHeight: "100vh", marginTop: "64px" }}
       >
         <Drawer
           anchor="left"

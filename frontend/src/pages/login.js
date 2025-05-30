@@ -100,18 +100,35 @@ function Login() {
         ...(isEmailLogin ? { email: credentials.email.trim() } : { mobile: credentials.mobile.trim() }),
       };
       const res = await axios.post("http://localhost:5000/api/user/login", payload);
+
       const { token, user } = res.data;
-      
+
       // Store in sessionStorage
+      sessionStorage.setItem("userId", user._id);
       sessionStorage.setItem("token", token);
       sessionStorage.setItem("userdata", JSON.stringify(user));
-      
+
       // Store in Redux
       dispatch(setUser({ ...user, token }));
 
       notify("Login successful!", "success");
-      user.type === "Register" ? navigate("/viewprofile") : navigate("/");
+
+      // Redirect based on role
+      if (user.role === "superadmin") {
+        navigate("/superadmin/sellers");
+      } 
+      
+       else if (user.role === "seller") {
+        navigate("/adminlandingpage");
+      } 
+      else if (user.type === "Register") {
+        navigate("/viewprofile");
+      } else {
+        navigate("/");
+      }
     } catch (error) {
+      console.error("Login error:", error);
+
       notify(error.response?.data?.message || "Something went wrong", "error");
     }
   };

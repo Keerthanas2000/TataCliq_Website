@@ -242,9 +242,9 @@ function Home() {
           const text = match[1].toLowerCase().trim();
           if (text && !text.includes("popular brands")) {
             if (text.includes(query)) {
-              results.brands.push({ 
-                text: text, 
-                path: text.replace(/\s+/g, "-") 
+              results.brands.push({
+                text: text,
+                path: text.replace(/\s+/g, "-"),
               });
             }
           }
@@ -253,8 +253,8 @@ function Home() {
 
       setIsSearchDropdownOpen(
         results.categories.length > 0 ||
-        results.subcategories.length > 0 ||
-        results.brands.length > 0
+          results.subcategories.length > 0 ||
+          results.brands.length > 0
       );
       setSearchResults(results);
     } else {
@@ -321,10 +321,13 @@ function Home() {
         setSearchQuery("");
         setIsSearchDropdownOpen(false);
       } else {
-        toast.error("No matching category, subcategory, type, or brand found.", {
-          position: "top-right",
-          autoClose: 3000,
-        });
+        toast.error(
+          "No matching category, subcategory, type, or brand found.",
+          {
+            position: "top-right",
+            autoClose: 3000,
+          }
+        );
       }
     } catch (error) {
       console.error("Error searching products:", error);
@@ -395,6 +398,17 @@ function Home() {
                         <i className="fa-regular fa-user"></i> My Account
                       </a>
                     </p>
+
+                    <p>
+                      {JSON.parse(sessionStorage.getItem("userdata"))?.role ===
+                        "superadmin" && (
+                        <a
+                        
+                            href="#" onClick={() => navigate("/superadmin/sellers")}>
+                          <i className="fa-regular fa-user"></i> Seller Profile
+                        </a>
+                      )}
+                    </p>
                     <p>
                       <a href="#">
                         <i className="fa-solid fa-bag-shopping"></i> Alerts/
@@ -416,7 +430,7 @@ function Home() {
                   </div>
                 </div>
                 <div>
-                  <Link className="topMenu" to="/cliqcashwallet">
+                  <Link className="topMenu" to="/track-orders">
                     Track Orders
                   </Link>
                 </div>
@@ -560,7 +574,9 @@ function Home() {
                     ></i>
                   </span>
                   {isBrandDropdownOpen && (
-                    <div className="dropdown-content"> {/* Changed from dropdown-content_Br to dropdown-content */}
+                    <div className="dropdown-content">
+                      {" "}
+                      {/* Changed from dropdown-content_Br to dropdown-content */}
                       <div id="blockshow">
                         <table
                           id="brandTable"

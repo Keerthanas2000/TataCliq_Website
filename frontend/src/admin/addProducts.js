@@ -1,4 +1,4 @@
-import React, { useState , useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
   Box,
@@ -77,7 +77,7 @@ const categorySubcategoryTypeMap = {
 const brands = [
   "Libas",
   "W",
-  "Satrani ",
+  "Satrani",
   "Aarke",
   "Shubkala",
   "Zara",
@@ -86,36 +86,41 @@ const brands = [
   "Soch",
   "Dress India",
   "Puma",
-  "Nike"
-  
+  "Nike",
 ];
 
 function AddProducts() {
-const [productData, setProductData] = useState({
-  name: "",
-  category: "",
-  subcategory: "",
-  type: "",
-  price: "",
-  brand: "",
-  images: [""],
-  description: "Premium quality product designed for style and comfort. Made with high-quality materials for long-lasting durability. Perfect for everyday use, combining functionality with modern aesthetics. A great addition to your collection that offers excellent value for money",
-  sellername: "ABC PVT LTD Bengaluru",
-  shipmentIndays: "7",
-});
+  const userdata = JSON.parse(sessionStorage.getItem("userdata")) || {}; // Fetch userdata from sessionStorage
 
-useEffect(() => {
-  if (productData.brand || productData.subcategory || productData.type) {
-    const generatedName = `${productData.brand || ''} ${productData.subcategory || ''} ${productData.type || ''}`.trim();
-    setProductData(prev => ({
-      ...prev,
-      name: generatedName
-    }));
-  }
-}, [productData.brand, productData.subcategory, productData.type]);
+  const [productData, setProductData] = useState({
+    name: "",
+    category: null,
+    subcategory: null,
+    type: null,
+    price: "",
+    brand: "",
+    images: [""],
+    description:
+      "Premium quality product designed for style and comfort. Made with high-quality materials for long-lasting durability. Perfect for everyday use, combining functionality with modern aesthetics. A great addition to your collection that offers excellent value for money",
+    sellername: userdata.name || "", // Set to user's name from sessionStorage
+    sellerId: userdata._id || "", // Set to user's _id from sessionStorage
+    shipmentIndays: "7",
+  });
 
   const [currentSubcategories, setCurrentSubcategories] = useState([]);
   const [currentTypes, setCurrentTypes] = useState([]);
+
+  useEffect(() => {
+    if (productData.brand || productData.subcategory || productData.type) {
+      const generatedName = `${productData.brand || ""} ${
+        productData.subcategory || ""
+      } ${productData.type || ""}`.trim();
+      setProductData((prev) => ({
+        ...prev,
+        name: generatedName,
+      }));
+    }
+  }, [productData.brand, productData.subcategory, productData.type]);
 
   const handleChange = (field, value) => {
     setProductData((prev) => ({
@@ -128,8 +133,8 @@ useEffect(() => {
     setProductData((prev) => ({
       ...prev,
       category: newValue,
-      subcategory: "",
-      type: "",
+      subcategory: null,
+      type: null,
     }));
     setCurrentSubcategories(
       newValue ? Object.keys(categorySubcategoryTypeMap[newValue] || {}) : []
@@ -141,7 +146,7 @@ useEffect(() => {
     setProductData((prev) => ({
       ...prev,
       subcategory: newValue,
-      type: "",
+      type: null,
     }));
     setCurrentTypes(
       newValue && productData.category
@@ -180,10 +185,41 @@ useEffect(() => {
       images: productData.images.filter((img) => img.trim() !== ""),
       price: Number(productData.price),
       shipmentIndays: Number(productData.shipmentIndays),
+
+      sizes: ["S", "M", "L", "XL", "XXL"],
+      stock: [
+        {
+          size: "S",
+          quantity: 12,
+        },
+        {
+          size: "M",
+          quantity: 20,
+        },
+        {
+          size: "L",
+          quantity: 25,
+        },
+        {
+          size: "XL",
+          quantity: 15,
+        },
+        {
+          size: "XXL",
+          quantity: 8,
+        },
+      ],
+
+      sellername: userdata.name || productData.sellername, // Ensure sellername from sessionStorage
+      sellerId: userdata._id || productData.sellerId, // Ensure sellerId from sessionStorage
     };
 
     axios
-      .post("http://localhost:5000/api/products/createProducts", finalData)
+      .post("http://localhost:5000/api/products/createProducts", finalData, {
+        headers: {
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`, // Include token for auth
+        },
+      })
       .then((response) => {
         console.log("Product Created Successfully", response.data);
         Swal.fire({
@@ -192,15 +228,17 @@ useEffect(() => {
         });
         setProductData({
           name: "",
-          category: "",
-          subcategory: "",
-          type: "",
+          category: null,
+          subcategory: null,
+          type: null,
           price: "",
           brand: "",
           images: [""],
-          // description: "",
-          // sellername: "",
-          // shipmentIndays: "",
+          description:
+            "Premium quality product designed for style and comfort. Made with high-quality materials for long-lasting durability. Perfect for everyday use, combining functionality with modern aesthetics. A great addition to your collection that offers excellent value for money",
+          sellername: userdata.name || "",
+          sellerId: userdata._id || "",
+          shipmentIndays: "7",
         });
         setCurrentSubcategories([]);
         setCurrentTypes([]);
@@ -217,7 +255,7 @@ useEffect(() => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ p: 1, mx: "auto", mt:20 }}>
+      <Box sx={{ p: 1, mx: "auto" }}>
         <Typography variant="h5" color="primary">
           Add Product
         </Typography>
@@ -226,8 +264,8 @@ useEffect(() => {
           <Grid size={12}>
             <Typography variant="h5" color="primary">
               Product details
-            </Typography>{" "}
-          </Grid>{" "}
+            </Typography>
+          </Grid>
           <Grid size={5}>
             <Autocomplete
               fullWidth
@@ -238,8 +276,8 @@ useEffect(() => {
                 options.filter((option) =>
                   option.toLowerCase().includes(inputValue.toLowerCase())
                 )
-              }  getOptionLabel={(option) => option?.label || ''}
-
+              }
+              getOptionLabel={(option) => option || ""}
               renderInput={(params) => (
                 <TextField {...params} label="Category" color="primary" />
               )}
@@ -248,8 +286,6 @@ useEffect(() => {
           <Grid size={5}>
             <Autocomplete
               fullWidth
-                getOptionLabel={(option) => option?.label || ''}
-
               options={
                 Array.isArray(currentSubcategories) ? currentSubcategories : []
               }
@@ -261,6 +297,7 @@ useEffect(() => {
                   option.toLowerCase().includes(inputValue.toLowerCase())
                 )
               }
+              getOptionLabel={(option) => option || ""}
               renderInput={(params) => (
                 <TextField {...params} label="Subcategory" color="primary" />
               )}
@@ -268,9 +305,8 @@ useEffect(() => {
           </Grid>
           <Grid size={5}>
             <Autocomplete
+              fullWidth
               options={Array.isArray(currentTypes) ? currentTypes : []}
-                getOptionLabel={(option) => option?.label || ''}
-
               value={productData.type}
               onChange={(_, newValue) => handleChange("type", newValue)}
               disabled={!productData.subcategory}
@@ -279,6 +315,7 @@ useEffect(() => {
                   option.toLowerCase().includes(inputValue.toLowerCase())
                 )
               }
+              getOptionLabel={(option) => option || ""}
               renderInput={(params) => (
                 <TextField {...params} label="Type" color="primary" />
               )}
@@ -290,6 +327,7 @@ useEffect(() => {
               freeSolo
               value={productData.brand}
               onChange={(_, newValue) => handleChange("brand", newValue)}
+              getOptionLabel={(option) => option || ""}
               renderInput={(params) => (
                 <TextField {...params} label="Brand" color="primary" />
               )}
@@ -314,7 +352,7 @@ useEffect(() => {
               value={productData.price}
               onChange={(e) => handleChange("price", e.target.value)}
             />
-          </Grid>{" "}
+          </Grid>
           <Grid size={2}>
             <TextField
               label="Shipment (in Days)"
@@ -344,10 +382,9 @@ useEffect(() => {
           <Grid size={6}>
             <Typography variant="h6" sx={{ mt: 4 }} color="primary">
               Product Images
-            </Typography>{" "}
-          </Grid>{" "}
+            </Typography>
+          </Grid>
           <Grid size={6}>
-            {" "}
             <Button
               startIcon={<AddIcon />}
               onClick={addImageField}
@@ -355,7 +392,7 @@ useEffect(() => {
               sx={{ mt: 4 }}
             >
               Add Image
-            </Button>{" "}
+            </Button>
           </Grid>
           {productData.images.map((img, index) => (
             <>
@@ -366,24 +403,23 @@ useEffect(() => {
                   onChange={(e) => handleImageChange(index, e.target.value)}
                   fullWidth
                   color="primary"
-                />{" "}
+                />
               </Grid>
               <Grid size={6}>
-                {" "}
                 <IconButton
                   color="error"
                   onClick={() => removeImageField(index)}
                   sx={{ ml: 1 }}
                 >
                   <DeleteIcon />
-                </IconButton>{" "}
+                </IconButton>
               </Grid>
             </>
           ))}
           <Grid size={12}>
             <Typography variant="h5" color="primary">
               Seller details
-            </Typography>{" "}
+            </Typography>
           </Grid>
           <Grid size={6}>
             <TextField
@@ -391,7 +427,9 @@ useEffect(() => {
               fullWidth
               color="primary"
               value={productData.sellername}
-              onChange={(e) => handleChange("sellername", e.target.value)}
+              InputProps={{
+                readOnly: true, // Make sellername read-only
+              }}
             />
           </Grid>
           <Grid size={12}>
@@ -403,7 +441,7 @@ useEffect(() => {
               onClick={handleSubmit}
             >
               Save Product
-            </Button>{" "}
+            </Button>
           </Grid>
         </Grid>
       </Box>

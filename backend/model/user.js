@@ -7,14 +7,21 @@ const userSchema = new mongoose.Schema({
   resetToken: { type: String, required: false },
   resetTokenExpiry: { type: Number, required: false },
   name: { type: String, default: "Guest" },
-  role: { type: String, default: "user" },
+  role: {
+    type: String,
+    enum: ["user", "seller", "superadmin"],
+    default: "user",
+  },
   type: { type: String, default: "signin" },
-  cliqcash: { type: String, default: "0" },
-  giftcard: { type: String, default: "0" },
+  cliqCash: { type: Number, default: 0 },
+  giftCard: { type: Number, default: 0 },
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
   cart: [
     {
       productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+      sellerId: { type: String, required: true },
+      sellername: { type: String, required: true },
+      packagestatus: { type: String, required: true },
       quantity: { type: Number, default: 1 },
     },
   ],
@@ -27,7 +34,6 @@ const userSchema = new mongoose.Schema({
   ],
   orderHistory: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
 });
-
 
 const User = mongoose.model("User", userSchema);
 

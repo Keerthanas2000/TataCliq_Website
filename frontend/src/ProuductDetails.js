@@ -103,6 +103,8 @@ const ProductDetails = () => {
     size: selectedSize,
     quantity: 1, // Dispatch one item at a time
     totalPrice: product.price,
+    sellerId: product.sellerId,
+    sellername: product.sellername,
   };
 
   // Dispatch addTocart for each unit of quantity

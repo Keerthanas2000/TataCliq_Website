@@ -8,7 +8,8 @@ const {
   validateToken,
   getAddresses,
   getProfile,
-  authMiddleware,
+  createSeller,
+  getSellers,authMiddleware,
 } = require("../controllers/userControllers");
 
 router.post("/login", login);
@@ -18,5 +19,7 @@ router.put("/updateProfile", authMiddleware, updateProfile);
 router.get("/validate-token/:token", validateToken);
 router.get("/addresses", authMiddleware, getAddresses);
 router.get("/profile", authMiddleware, getProfile);
+router.post("/seller", authMiddleware, createSeller); // New route
+router.get("/sellers", authMiddleware, getSellers); // New route
 
 module.exports = router;

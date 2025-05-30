@@ -22,6 +22,8 @@ import ResetPassword from "./login/ResetPassword";
 import ClickCare from "./pages/ClicKCare";
 import ProductDetails from "./ProuductDetails";
 import Wishlist from "./Wishlist";
+import TrackOrders from "./pages/TrackOrders";
+import SuperAdminSellers from "./pages/SuperAdminSellers";
 
 function Layout() {
   return (
@@ -51,20 +53,33 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route element={<Layout />}>
-                <Route path="/adminlandingpage" element={<AdminLandingPage />} />
-                <Route path="/payment-success" element={<PaymentSuccess />} /> {/* Updated from /success */}
+                <Route
+                  path="/adminlandingpage"
+                  element={<AdminLandingPage />}
+                />
+                <Route path="/payment-success" element={<PaymentSuccess />} />{" "}
+                {/* Updated from /success */}
                 <Route path="/category/*" element={<Categorypage />} />
-                <Route path="/" element={<Homepagecontent />} />
+                <Route path="/" element={<Homepagecontent />} />{" "}
+                <Route path="/track-orders" element={<TrackOrders />} />{" "}
                 <Route path="/cart" element={<CartDetails />} />
                 <Route path="/wishlist" element={<Wishlist />} />
                 <Route path="/viewprofile" element={<Viewprofile />} />
                 <Route path="/details" element={<ProductDetails />} />
                 <Route path="/cliqcashwallet" element={<CliqCashWallet />} />
                 <Route path="/giftcard" element={<GiftCardPage />} />
-                <Route path="/ClickCare" element={<ClickCare />} />
+                <Route path="/ClickCare" element={<ClickCare />} />{" "}
+                <Route
+                  path="/superadmin/sellers"
+                  element={<SuperAdminSellers />}
+                />
               </Route>
               <Route path="/login" element={<Login />} />
-              <Route path="/reset-password/:token" element={<ResetPassword />} />
+              <Route
+                path="/reset-password/:token"
+                element={<ResetPassword />}
+              />
+              {/* Add route */}
             </Routes>
           </BrowserRouter>
         </>

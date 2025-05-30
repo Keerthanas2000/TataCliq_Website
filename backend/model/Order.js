@@ -1,5 +1,3 @@
-
-
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
@@ -7,7 +5,11 @@ const orderSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   items: [
     {
-      productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+      productId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+        required: true,
+      },
       title: { type: String, required: true },
       price: { type: Number, required: true },
       quantity: { type: Number, required: true },
@@ -15,6 +17,23 @@ const orderSchema = new mongoose.Schema({
       size: { type: String, default: "N/A" },
       color: { type: String, default: "N/A" },
       image: { type: String, default: "/images/fallback.jpg" },
+
+      sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      sellername: { type: String, required: true },
+      packagestatus: {
+        type: String,
+        required: true,
+        enum: [
+          "order_placed",
+          "payment_confirmed",
+          "order_confirmed",
+          "packed",
+          "shipped",
+          "out_for_delivery",
+          "delivered",
+          "cancelled",
+        ],
+      },
     },
   ],
   totalPrice: { type: Number, required: true },
@@ -34,7 +53,6 @@ const orderSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now },
 });
-
 
 const Order = mongoose.model("Order", orderSchema);
 

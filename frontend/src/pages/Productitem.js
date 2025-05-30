@@ -14,6 +14,8 @@ import {
 import { setCurrentProduct } from "../actions/setCurrentProduct";
 
 function Productitem(props) {
+
+  console.log("Productitem props:", props); // Debugging line to check props  
   const dispatch = useDispatch();
   const navigate = useNavigate(); // Initialize navigate
   const wishlistItems = useSelector((state) => state.wishlist.items);

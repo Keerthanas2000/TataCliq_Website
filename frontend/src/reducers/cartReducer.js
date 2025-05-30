@@ -43,6 +43,8 @@ const cartReducer = (state = initialState, action) => {
             ...newItem,
             quantity: 1,
             total_item_price: newItem.price,
+            sellerId: newItem.sellerId,
+            sellername: newItem.sellername,
           },
         ];
 
