@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import "@fortawesome/fontawesome-free/css/all.min.css";
 import { addTocart } from "./actions/CartActions";
 import {
   Button,

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import "bootstrap-icons/font/bootstrap-icons.css";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { toast, ToastContainer } from "react-toastify"; // Added toast import
