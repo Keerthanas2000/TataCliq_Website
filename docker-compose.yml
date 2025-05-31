@@ -3,49 +3,47 @@ services:
   frontend:
     container_name: frontend-container
     build:
-      context: ./frontend  # Path to your frontend code
+      context: ./frontend
+      dockerfile: dockerfile  # Specify lowercase
     ports:
-      - "4000:4000"  # Expose frontend on port 4000
+      - "4000:4000"
     environment:
-      - REACT_APP_API_URL=http://${PUBLIC_IP_HOST_MACHINE}:4500/api
+      - REACT_APP_API_URL=http://backend-container:4500/api
     depends_on:
       - backend
     networks:
       - mern-network
     restart: always
-
   backend:
     container_name: backend-container
     build:
-      context: ./backend  # Path to your backend code
+      context: ./backend
+      dockerfile: dockerfile  # Ensure backend also uses lowercase if needed
     ports:
-      - "4500:4500"  # Expose backend on port 4500
+      - "4500:4500"
     environment:
-      - MONGO_URL=mongodb://mongo-container:27017/product  # Use internal Docker hostname for MongoDB
-      - JWT_SECRET=your_super_secret_key  # JWT secret for backend authentication
+      - MONGO_URL=mongodb://mongo-container:27017/product
+      - JWT_SECRET=your_super_secret_key
       - PORT=4500
     depends_on:
       - mongo
     networks:
       - mern-network
     restart: always
-
   mongo:
     image: mongo
     container_name: mongo-container
     environment:
-      - MONGO_INITDB_DATABASE=product # Database name
+      - MONGO_INITDB_DATABASE=product
     ports:
-      - "27017:27017"  # Expose MongoDB on port 27017
+      - "27017:27017"
     volumes:
-      - mongo-data:/data/db  # Persist MongoDB data
+      - mongo-data:/data/db
     networks:
       - mern-network
     restart: always
-
 volumes:
-  mongo-data:  # Persistent volume for MongoDB data
-
+  mongo-data:
 networks:
   mern-network:
     driver: bridge
