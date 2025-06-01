@@ -1,17 +1,18 @@
 {
-  "name": "y",
+  "name": "tatacliq-backend",
   "version": "1.0.0",
-  "description": "User Management app",
+  "description": "Backend for TataCliq Website",
   "keywords": [
-    "Admin ROLES privilages"
+    "ecommerce",
+    "backend"
   ],
-  "homepage": "https://github.com/Keerthanas2000/UserManagement_Project#readme",
+  "homepage": "https://github.com/Keerthanas2000/TataCliq_Website#readme",
   "bugs": {
-    "url": "https://github.com/Keerthanas2000/UserManagement_Project/issues"
+    "url": "https://github.com/Keerthanas2000/TataCliq_Website/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Keerthanas2000/UserManagement_Project.git"
+    "url": "git+https://github.com/Keerthanas2000/TataCliq_Website.git"
   },
   "license": "ISC",
   "author": "Keerthana",

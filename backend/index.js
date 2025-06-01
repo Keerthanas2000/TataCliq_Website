@@ -11,8 +11,7 @@ const connecttoDb = require("./config/database");
 
 dotenv.config();
 
-
-const PORT = process.env.PORT || 3010;
+const PORT = process.env.PORT || 5000; // Changed to 5000
 
 const app = express();
 connecttoDb();
